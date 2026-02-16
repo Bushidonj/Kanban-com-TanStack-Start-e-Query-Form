@@ -60,6 +60,18 @@ export const MOCK_USERS = [
   'Bruno Carvalho',
 ];
 
+export const AVAILABLE_TAGS = [
+  { id: 'tag-1', name: 'Estudos', color: '#6b7280' },
+  { id: 'tag-2', name: 'Interno', color: '#16a34a' },
+  { id: 'tag-3', name: 'Back-end', color: '#2563eb' },
+  { id: 'tag-4', name: 'Front-end', color: '#9333ea' },
+  { id: 'tag-5', name: 'Design', color: '#dc2626' },
+  { id: 'tag-6', name: 'Infra', color: '#ca8a04' },
+  { id: 'tag-7', name: 'Outros', color: '#6b7280' },
+  { id: 'tag-8', name: 'Teste em HML', color: '#d97706' },
+  { id: 'tag-9', name: 'bug', color: '#06b6d4' },
+];
+
 export const DESCRIPTION_TEMPLATES = {
   frontend: `📋Template para Nova Tarefa de Front-end📋
 

@@ -1,7 +1,7 @@
 import { useForm } from '@tanstack/react-form';
 import { X, Calendar as CalendarIcon, Tag, MessageSquare, FileText, Target, Users, CircleDot, ArrowDownCircle, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Card, CardStatus, Priority } from '../../types/kanban';
-import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES } from '../../mock/kanbanData';
+import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES, AVAILABLE_TAGS } from '../../mock/kanbanData';
 import { useState, useRef, useEffect } from 'react';
 import { Plus, FileText as FileTextIcon } from 'lucide-react';
 
@@ -15,9 +15,13 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
     const [isStatusOpen, setIsStatusOpen] = useState(false);
     const [isUserOpen, setIsUserOpen] = useState(false);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const [isPriorityOpen, setIsPriorityOpen] = useState(false);
+    const [isTagsOpen, setIsTagsOpen] = useState(false);
     const statusRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
     const calendarRef = useRef<HTMLDivElement>(null);
+    const priorityRef = useRef<HTMLDivElement>(null);
+    const tagsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -29,6 +33,12 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             }
             if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
                 setIsCalendarOpen(false);
+            }
+            if (priorityRef.current && !priorityRef.current.contains(event.target as Node)) {
+                setIsPriorityOpen(false);
+            }
+            if (tagsRef.current && !tagsRef.current.contains(event.target as Node)) {
+                setIsTagsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -43,6 +53,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             deadline: card.deadline,
             priority: card.priority,
             description: card.description || '',
+            tags: card.tags,
         },
         onSubmit: async ({ value }) => {
             onUpdate({
@@ -134,7 +145,6 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                                             ? field.state.value.filter((u: string) => u !== user)
                                                                             : [...field.state.value, user];
                                                                         field.handleChange(newValue);
-                                                                        form.handleSubmit();
                                                                     }}
                                                                     className={`
                                                                         flex items-center justify-between p-2 rounded cursor-pointer transition-colors
@@ -273,45 +283,119 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                 <form.Field
                                     name="priority"
                                     children={(field) => (
-                                        <div className="flex items-center gap-2 h-6">
-                                            <span
-                                                className={`text-xs px-2 py-0.5 rounded font-bold ${field.state.value === 'Urgente' ? 'bg-red-900/40 text-red-400' :
-                                                    field.state.value === 'Média' ? 'bg-orange-900/40 text-orange-400' :
-                                                        'bg-green-900/40 text-green-400'
+                                        <div className="relative" ref={priorityRef}>
+                                            <div
+                                                className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-notion-hover transition-colors"
+                                                onClick={() => setIsPriorityOpen(!isPriorityOpen)}
+                                            >
+                                                <span
+                                                    className={`text-xs font-bold px-2 py-0.5 rounded ${field.state.value === 'Urgente' ? 'bg-red-900/40 text-red-400' :
+                                                        field.state.value === 'Média' ? 'bg-orange-900/40 text-orange-400' :
+                                                            'bg-green-900/40 text-green-400'
                                                     }`}
-                                            >
-                                                {field.state.value}
-                                            </span>
-                                            <select
-                                                name={field.name}
-                                                value={field.state.value}
-                                                onChange={(e) => {
-                                                    field.handleChange(e.target.value as Priority);
-                                                    form.handleSubmit();
-                                                }}
-                                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                                            >
-                                                <option value="Baixa" className="bg-notion-sidebar">Baixa</option>
-                                                <option value="Média" className="bg-notion-sidebar">Média</option>
-                                                <option value="Urgente" className="bg-notion-sidebar">Urgente</option>
-                                            </select>
+                                                >
+                                                    {field.state.value}
+                                                </span>
+                                            </div>
+
+                                            {isPriorityOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-48 bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl z-[60] overflow-hidden p-1">
+                                                    {(['Baixa', 'Média', 'Urgente'] as Priority[]).map(priority => (
+                                                        <div
+                                                            key={priority}
+                                                            onClick={() => {
+                                                                field.handleChange(priority);
+                                                                setIsPriorityOpen(false);
+                                                            }}
+                                                            className={`
+                                                                flex items-center gap-2 p-2 rounded cursor-pointer transition-colors
+                                                                ${field.state.value === priority ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
+                                                            `}
+                                                        >
+                                                            <span
+                                                                className={`text-xs font-bold px-2 py-0.5 rounded ${priority === 'Urgente' ? 'bg-red-900/40 text-red-400' :
+                                                                    priority === 'Média' ? 'bg-orange-900/40 text-orange-400' :
+                                                                        'bg-green-900/40 text-green-400'
+                                                                }`}
+                                                            >
+                                                                {priority}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 />
                             </PropertyItem>
 
                             <PropertyItem icon={<Tag size={16} />} label="Tags">
-                                <div className="flex flex-wrap gap-2">
-                                    {card.tags.map(tag => (
-                                        <span
-                                            key={tag.id}
-                                            className="text-xs px-2 py-0.5 rounded font-bold"
-                                            style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
-                                        >
-                                            {tag.name}
-                                        </span>
-                                    ))}
-                                </div>
+                                <form.Field
+                                    name="tags"
+                                    children={(field) => (
+                                        <div className="relative" ref={tagsRef}>
+                                            <div
+                                                className="flex flex-wrap gap-2 min-h-[32px] p-1 rounded border border-notion-border/30 hover:border-notion-border/60 transition-colors cursor-pointer"
+                                                onClick={() => setIsTagsOpen(!isTagsOpen)}
+                                            >
+                                                {field.state.value.length > 0 ? (
+                                                    field.state.value.map((tag: any) => (
+                                                        <span
+                                                            key={tag.id}
+                                                            className="text-xs px-2 py-0.5 rounded font-bold flex items-center gap-1"
+                                                            style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
+                                                        >
+                                                            {tag.name}
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newTags = field.state.value.filter((t: any) => t.id !== tag.id);
+                                                                    field.handleChange(newTags);
+                                                                }}
+                                                                className="ml-1 hover:opacity-70 transition-opacity"
+                                                            >
+                                                                <X size={10} />
+                                                            </button>
+                                                        </span>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-notion-text-muted">Select an option or create one</span>
+                                                )}
+                                            </div>
+
+                                            {isTagsOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-64 bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl z-[60] overflow-hidden p-2 max-h-48 overflow-y-auto">
+                                                    {AVAILABLE_TAGS.map(tag => {
+                                                        const isSelected = field.state.value.some((t: any) => t.id === tag.id);
+                                                        return (
+                                                            <div
+                                                                key={tag.id}
+                                                                onClick={() => {
+                                                                    const newTags = isSelected
+                                                                        ? field.state.value.filter((t: any) => t.id !== tag.id)
+                                                                        : [...field.state.value, tag];
+                                                                    field.handleChange(newTags);
+                                                                }}
+                                                                className={`
+                                                                    flex items-center gap-2 p-2 rounded cursor-pointer transition-colors
+                                                                    ${isSelected ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
+                                                                `}
+                                                            >
+                                                                <span
+                                                                    className="text-xs px-2 py-0.5 rounded font-bold"
+                                                                    style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
+                                                                >
+                                                                    {tag.name}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                />
                             </PropertyItem>
 
                             {/* Attachments shown as Sub-tasks */}
