@@ -2,13 +2,13 @@ export type Priority = 'Baixa' | 'Média' | 'Urgente';
 
 export type CardStatus = 
   | 'Backlog'
-  | 'To do'
+  | 'To Do'
   | 'Doing'
-  | 'Awaiting Response'
-  | 'Awaiting Review'
-  | 'HML Testing'
+  | 'Waiting Response'
+  | 'Waiting Review'
+  | 'Waiting Test'
   | 'Blocked'
-  | 'Bugs'
+  | 'Bug'
   | 'Complete'
   | 'Closed';
 
@@ -29,7 +29,7 @@ export interface Card {
   id: string;
   title: string;
   description?: string;
-  responsible: string;
+  responsible: string[];
   status: CardStatus;
   deadline: string;
   priority: Priority;

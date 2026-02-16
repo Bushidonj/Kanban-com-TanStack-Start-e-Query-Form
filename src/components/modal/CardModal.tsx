@@ -1,7 +1,9 @@
 import { useForm } from '@tanstack/react-form';
-import { X, Calendar, User, Tag, MessageSquare, AlertCircle } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Tag, MessageSquare, FileText, Target, Users, CircleDot, ArrowDownCircle, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Card, CardStatus, Priority } from '../../types/kanban';
-import { INITIAL_COLUMNS } from '../../mock/kanbanData';
+import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES } from '../../mock/kanbanData';
+import { useState, useRef, useEffect } from 'react';
+import { Plus, FileText as FileTextIcon } from 'lucide-react';
 
 interface CardModalProps {
     card: Card;
@@ -10,6 +12,29 @@ interface CardModalProps {
 }
 
 export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
+    const [isStatusOpen, setIsStatusOpen] = useState(false);
+    const [isUserOpen, setIsUserOpen] = useState(false);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const statusRef = useRef<HTMLDivElement>(null);
+    const userRef = useRef<HTMLDivElement>(null);
+    const calendarRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+                setIsStatusOpen(false);
+            }
+            if (userRef.current && !userRef.current.contains(event.target as Node)) {
+                setIsUserOpen(false);
+            }
+            if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+                setIsCalendarOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const form = useForm({
         defaultValues: {
             title: card.title,
@@ -71,73 +96,240 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                         />
 
                         {/* Properties Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <PropertyItem icon={<User size={16} />} label="Responsável">
-                                <form.Field
-                                    name="responsible"
-                                    children={(field) => (
-                                        <input
-                                            name={field.name}
-                                            value={field.state.value}
-                                            onBlur={field.handleBlur}
-                                            onChange={(e) => field.handleChange(e.target.value)}
-                                            className="bg-transparent outline-none w-full text-notion-text"
-                                            placeholder="Ninguém"
-                                        />
-                                    )}
-                                />
+                        <div className="space-y-1">
+                            <PropertyItem icon={<Users size={16} />} label="Responsável(is)">
+                                <div className="relative" ref={userRef}>
+                                    <form.Field
+                                        name="responsible"
+                                        children={(field) => (
+                                            <>
+                                                <div
+                                                    className="flex flex-wrap items-center gap-1.5 cursor-pointer p-1 rounded hover:bg-notion-hover transition-colors min-h-[28px]"
+                                                    onClick={() => setIsUserOpen(!isUserOpen)}
+                                                >
+                                                    {field.state.value.length > 0 ? (
+                                                        field.state.value.map((userName: string) => (
+                                                            <div key={userName} className="flex items-center gap-1.5 bg-notion-hover px-1.5 py-0.5 rounded border border-notion-border">
+                                                                <div className="w-4 h-4 rounded-full bg-notion-border flex items-center justify-center text-[8px] font-bold text-notion-text">
+                                                                    {userName[0]}
+                                                                </div>
+                                                                <span className="text-xs text-notion-text">{userName}</span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-sm text-notion-text-muted">Ninguém</span>
+                                                    )}
+                                                </div>
+
+                                                {isUserOpen && (
+                                                    <div className="absolute top-full left-0 mt-1 w-56 bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl z-[60] overflow-hidden p-1">
+                                                        {MOCK_USERS.map(user => {
+                                                            const isSelected = field.state.value.includes(user);
+                                                            return (
+                                                                <div
+                                                                    key={user}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const newValue = isSelected
+                                                                            ? field.state.value.filter((u: string) => u !== user)
+                                                                            : [...field.state.value, user];
+                                                                        field.handleChange(newValue);
+                                                                        form.handleSubmit();
+                                                                    }}
+                                                                    className={`
+                                                                        flex items-center justify-between p-2 rounded cursor-pointer transition-colors
+                                                                        ${isSelected ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
+                                                                    `}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-5 h-5 rounded-full bg-notion-hover flex items-center justify-center text-[8px] font-bold border border-notion-border text-notion-text">
+                                                                            {user[0]}
+                                                                        </div>
+                                                                        <span className="text-sm text-notion-text">{user}</span>
+                                                                    </div>
+                                                                    {isSelected && (
+                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    />
+                                </div>
                             </PropertyItem>
 
-                            <PropertyItem icon={<AlertCircle size={16} />} label="Status">
+                            <PropertyItem icon={<CircleDot size={16} />} label="Status">
                                 <form.Field
                                     name="status"
                                     children={(field) => (
-                                        <select
-                                            name={field.name}
-                                            value={field.state.value}
-                                            onChange={(e) => field.handleChange(e.target.value as CardStatus)}
-                                            className="bg-transparent outline-none w-full text-notion-text cursor-pointer appearance-none"
-                                        >
-                                            {INITIAL_COLUMNS.map(col => (
-                                                <option key={col.id} value={col.id} className="bg-notion-sidebar">{col.title}</option>
-                                            ))}
-                                        </select>
+                                        <div className="relative" ref={statusRef}>
+                                            <div
+                                                className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-notion-hover transition-colors"
+                                                onClick={() => setIsStatusOpen(!isStatusOpen)}
+                                            >
+                                                <span
+                                                    className="text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1.5"
+                                                    style={{ backgroundColor: STATUS_TITLE_COLORS[field.state.value] || '#373737', color: '#fff' }}
+                                                >
+                                                    <span
+                                                        className="w-1.5 h-1.5 rounded-full"
+                                                        style={{ backgroundColor: STATUS_COLORS[field.state.value]?.column || '#fff' }}
+                                                    />
+                                                    {field.state.value}
+                                                </span>
+                                            </div>
+
+                                            {isStatusOpen && (
+                                                <div className="absolute top-full left-0 mt-1 w-64 bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl z-[60] overflow-hidden p-2">
+                                                    {STATUS_CATEGORIES.map(category => (
+                                                        <div key={category.name} className="mb-2 last:mb-0">
+                                                            <div className="text-[10px] font-bold text-notion-text-muted px-2 py-1 uppercase tracking-wider">
+                                                                {category.name}
+                                                            </div>
+                                                            <div className="space-y-0.5 mt-1">
+                                                                {category.statuses.map(status => (
+                                                                    <div
+                                                                        key={status}
+                                                                        onClick={() => {
+                                                                            field.handleChange(status as CardStatus);
+                                                                            setIsStatusOpen(false);
+                                                                            form.handleSubmit();
+                                                                        }}
+                                                                        className={`
+                                                                            flex items-center gap-2 p-1 rounded cursor-pointer transition-colors
+                                                                            ${field.state.value === status ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
+                                                                        `}
+                                                                    >
+                                                                        <span
+                                                                            className="text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1.5 w-fit"
+                                                                            style={{ backgroundColor: STATUS_TITLE_COLORS[status] || '#373737', color: '#fff' }}
+                                                                        >
+                                                                            <span
+                                                                                className="w-1.5 h-1.5 rounded-full"
+                                                                                style={{ backgroundColor: STATUS_COLORS[status]?.column || '#fff' }}
+                                                                            />
+                                                                            {status}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 />
                             </PropertyItem>
 
-                            <PropertyItem icon={<Calendar size={16} />} label="Prazo">
+                            <PropertyItem icon={<CalendarIcon size={16} />} label="Prazo">
                                 <form.Field
                                     name="deadline"
                                     children={(field) => (
-                                        <input
-                                            type="date"
-                                            name={field.name}
-                                            value={field.state.value}
-                                            onBlur={field.handleBlur}
-                                            onChange={(e) => field.handleChange(e.target.value)}
-                                            className="bg-transparent outline-none w-full text-notion-text cursor-pointer [color-scheme:dark]"
-                                        />
+                                        <div className="relative" ref={calendarRef}>
+                                            <div
+                                                className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-notion-hover transition-colors"
+                                                onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                                            >
+                                                <span className="text-sm text-notion-text capitalize">
+                                                    {new Date(field.state.value).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
+                                            </div>
+
+                                            {isCalendarOpen && (
+                                                <div className="absolute top-full left-0 mt-1 z-[60]">
+                                                    <NotionCalendar
+                                                        value={field.state.value}
+                                                        onChange={(date) => {
+                                                            field.handleChange(date);
+                                                            // form.handleSubmit(); // User requested to keep interactive but not change until backend, 
+                                                            // but for UX we'll update the form state. 
+                                                            // The prompt said "the date won't be swapped (on the backend/persistence)" 
+                                                            // but to feel interactive it should update locally.
+                                                        }}
+                                                        onClear={() => {
+                                                            field.handleChange(new Date().toISOString().split('T')[0]);
+                                                            setIsCalendarOpen(false);
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 />
                             </PropertyItem>
 
-                            <PropertyItem icon={<Tag size={16} />} label="Prioridade">
+                            <PropertyItem icon={<Target size={16} />} label="Feature(s)">
+                                <div className="flex items-center gap-2 text-notion-text text-sm">
+                                    <Target size={14} className="text-notion-text-muted" />
+                                    <span className="border-b border-notion-border/60 hover:border-notion-text transition-colors cursor-pointer">Criação do Wireframe</span>
+                                </div>
+                            </PropertyItem>
+
+                            <PropertyItem icon={<ArrowDownCircle size={16} />} label="Prioridade">
                                 <form.Field
                                     name="priority"
                                     children={(field) => (
-                                        <select
-                                            name={field.name}
-                                            value={field.state.value}
-                                            onChange={(e) => field.handleChange(e.target.value as Priority)}
-                                            className="bg-transparent outline-none w-full text-notion-text cursor-pointer appearance-none"
-                                        >
-                                            <option value="Baixa" className="bg-notion-sidebar">Baixa</option>
-                                            <option value="Média" className="bg-notion-sidebar">Média</option>
-                                            <option value="Urgente" className="bg-notion-sidebar">Urgente</option>
-                                        </select>
+                                        <div className="flex items-center gap-2 h-6">
+                                            <span
+                                                className={`text-xs px-2 py-0.5 rounded font-bold ${field.state.value === 'Urgente' ? 'bg-red-900/40 text-red-400' :
+                                                    field.state.value === 'Média' ? 'bg-orange-900/40 text-orange-400' :
+                                                        'bg-green-900/40 text-green-400'
+                                                    }`}
+                                            >
+                                                {field.state.value}
+                                            </span>
+                                            <select
+                                                name={field.name}
+                                                value={field.state.value}
+                                                onChange={(e) => {
+                                                    field.handleChange(e.target.value as Priority);
+                                                    form.handleSubmit();
+                                                }}
+                                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                            >
+                                                <option value="Baixa" className="bg-notion-sidebar">Baixa</option>
+                                                <option value="Média" className="bg-notion-sidebar">Média</option>
+                                                <option value="Urgente" className="bg-notion-sidebar">Urgente</option>
+                                            </select>
+                                        </div>
                                     )}
                                 />
+                            </PropertyItem>
+
+                            <PropertyItem icon={<Tag size={16} />} label="Tags">
+                                <div className="flex flex-wrap gap-2">
+                                    {card.tags.map(tag => (
+                                        <span
+                                            key={tag.id}
+                                            className="text-xs px-2 py-0.5 rounded font-bold"
+                                            style={{ backgroundColor: `${tag.color}33`, color: tag.color }}
+                                        >
+                                            {tag.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </PropertyItem>
+
+                            {/* Attachments shown as Sub-tasks */}
+                            <PropertyItem icon={<ArrowUpRight size={16} />} label="Sub-task">
+                                <div className="flex flex-col gap-2">
+                                    {card.attachments && card.attachments.length > 0 ? (
+                                        card.attachments.map(file => (
+                                            <div key={file} className="flex items-center gap-2 group/file cursor-pointer">
+                                                <FileText size={16} className="text-notion-text-muted group-hover/file:text-notion-text" />
+                                                <span className="text-sm font-bold border-b border-notion-border/60 group-hover/file:border-notion-text transition-colors">
+                                                    {file.includes('.') ? file.split('.')[0] : file}
+                                                </span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <span className="text-notion-text-muted text-sm italic">Nenhum anexo</span>
+                                    )}
+                                </div>
                             </PropertyItem>
                         </div>
 
@@ -147,14 +339,47 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                             <form.Field
                                 name="description"
                                 children={(field) => (
-                                    <textarea
-                                        name={field.name}
-                                        value={field.state.value}
-                                        onBlur={field.handleBlur}
-                                        onChange={(e) => field.handleChange(e.target.value)}
-                                        className="w-full bg-notion-hover border border-notion-border rounded-lg p-3 min-h-[100px] outline-none text-notion-text resize-none text-sm"
-                                        placeholder="Adicione uma descrição detalhada..."
-                                    />
+                                    <div className="space-y-4">
+                                        {!field.state.value && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <div className="text-sm text-notion-text-muted">
+                                                    Pressione 'Enter' para continuar com uma página vazia, ou escolha um template
+                                                    <span className="block text-[10px] opacity-60">(use '↑' e '↓' para selecionar)</span>
+                                                </div>
+
+                                                <div className="flex flex-col gap-1">
+                                                    <TemplateOption
+                                                        icon={<FileTextIcon size={16} />}
+                                                        label="Template Front-end Atividades"
+                                                        onClick={() => field.handleChange(DESCRIPTION_TEMPLATES.frontend)}
+                                                    />
+                                                    <TemplateOption
+                                                        icon={<FileTextIcon size={16} />}
+                                                        label="Template Back-end Atividades"
+                                                        onClick={() => field.handleChange(DESCRIPTION_TEMPLATES.backend)}
+                                                    />
+                                                    <TemplateOption
+                                                        icon={<Plus size={16} />}
+                                                        label="Novo Template"
+                                                        onClick={() => { }}
+                                                        isLast
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {(field.state.value || field.state.value === ' ') && (
+                                            <textarea
+                                                name={field.name}
+                                                value={field.state.value === ' ' ? '' : field.state.value}
+                                                onBlur={field.handleBlur}
+                                                onChange={(e) => field.handleChange(e.target.value)}
+                                                className="w-full bg-notion-hover border border-notion-border rounded-lg p-3 min-h-[150px] outline-none text-notion-text resize-none text-sm transition-all focus:border-notion-text-muted/30"
+                                                placeholder="Adicione uma descrição detalhada..."
+                                                autoFocus={field.state.value === ' '}
+                                            />
+                                        )}
+                                    </div>
                                 )}
                             />
                         </div>
@@ -213,31 +438,170 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                         Cancelar
                     </button>
                     <button
-                        onClick={() => document.getElementById('card-modal-submit')?.click()}
+                        onClick={() => {
+                            form.handleSubmit();
+                            onClose();
+                        }}
                         className="px-4 py-1.5 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors"
                     >
                         Salvar Alterações
                     </button>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 
 function PropertyItem({ icon, label, children }: { icon: React.ReactNode, label: string, children: React.ReactNode }) {
     return (
-        <div className="flex items-center gap-2 px-2 py-1 hover:bg-notion-hover rounded transition-colors group">
-            <div className="flex items-center gap-2 w-32 flex-shrink-0 text-notion-text-muted group-hover:text-notion-text-muted/80">
-                {icon}
-                <span className="font-medium text-xs uppercase tracking-tight">{label}</span>
+        <div className="flex items-start gap-4 px-2 py-1.5 hover:bg-notion-hover/40 rounded transition-colors group relative">
+            <div className="flex items-center gap-2 w-36 flex-shrink-0 text-notion-text-muted group-hover:text-notion-text transition-colors">
+                <div className="w-4 flex justify-center">{icon}</div>
+                <span className="font-medium text-xs tracking-tight">{label}</span>
             </div>
-            <div className="flex-1 truncate">
+            <div className="flex-1 relative">
                 {children}
             </div>
         </div>
     );
 }
 
+function TemplateOption({ icon, label, onClick, isLast }: { icon: React.ReactNode, label: string, onClick: () => void, isLast?: boolean }) {
+    return (
+        <div
+            onClick={onClick}
+            className={`flex items-center gap-3 p-2 hover:bg-notion-hover rounded-md cursor-pointer transition-colors group/opt ${isLast ? 'mt-1 pt-3 border-t border-notion-border' : ''}`}
+        >
+            <div className="text-notion-text-muted group-hover/opt:text-notion-text transition-colors">
+                {icon}
+            </div>
+            <span className="text-sm text-notion-text-muted group-hover/opt:text-notion-text transition-colors font-medium">
+                {label}
+            </span>
+        </div>
+    );
+}
+
 function LayoutIcon({ status }: { status: CardStatus }) {
-    return <div className="w-2 h-2 rounded-full bg-notion-text-muted" />;
+    const color = STATUS_COLORS[status]?.column || '#373737';
+    return (
+        <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-full bg-notion-hover border border-notion-border">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+        </div>
+    );
+}
+
+function NotionCalendar({ value, onChange, onClear }: { value: string, onChange: (date: string) => void, onClear: () => void }) {
+    const [currentDate, setCurrentDate] = useState(new Date(value));
+    const [selectedDate, setSelectedDate] = useState(new Date(value));
+
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    const handlePrevMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const handleDateSelect = (day: number) => {
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        setSelectedDate(newDate);
+        onChange(newDate.toISOString().split('T')[0]);
+    };
+
+    const handleToday = () => {
+        const today = new Date();
+        setCurrentDate(today);
+        setSelectedDate(today);
+        onChange(today.toISOString().split('T')[0]);
+    };
+
+    return (
+        <div className="bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl p-4 w-[280px]">
+            {/* Header Date Display */}
+            <div className="mb-4">
+                <div className="bg-notion-hover border border-notion-border rounded p-2 text-sm text-notion-text">
+                    {selectedDate.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between mb-4 px-1">
+                <span className="text-sm font-bold text-notion-text capitalize">
+                    {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </span>
+                <div className="flex items-center gap-1">
+                    <button onClick={handleToday} className="text-xs text-notion-text-muted hover:text-notion-text hover:bg-notion-hover px-2 py-1 rounded transition-colors mr-2">
+                        Hoje
+                    </button>
+                    <button onClick={handlePrevMonth} className="p-1 hover:bg-notion-hover rounded transition-colors text-notion-text-muted">
+                        <ChevronLeft size={16} />
+                    </button>
+                    <button onClick={handleNextMonth} className="p-1 hover:bg-notion-hover rounded transition-colors text-notion-text-muted">
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Week Days */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+                {weekDays.map(day => (
+                    <div key={day} className="text-[10px] text-notion-text-muted text-center font-bold">
+                        {day[0]}
+                    </div>
+                ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                    <div key={`empty-${i}`} className="h-8" />
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const day = i + 1;
+                    const isSelected = selectedDate.getDate() === day &&
+                        selectedDate.getMonth() === currentDate.getMonth() &&
+                        selectedDate.getFullYear() === currentDate.getFullYear();
+                    const isToday = new Date().getDate() === day &&
+                        new Date().getMonth() === currentDate.getMonth() &&
+                        new Date().getFullYear() === currentDate.getFullYear();
+
+                    return (
+                        <div
+                            key={day}
+                            onClick={() => handleDateSelect(day)}
+                            className={`
+                                h-8 w-8 flex items-center justify-center rounded cursor-pointer text-xs transition-colors
+                                ${isSelected ? 'bg-blue-600 text-white font-bold' :
+                                    isToday ? 'text-blue-500 font-bold hover:bg-notion-hover' :
+                                        'text-notion-text hover:bg-notion-hover'}
+                            `}
+                        >
+                            {day}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="mt-4 pt-2 border-t border-notion-border flex flex-col gap-1">
+                <button
+                    onClick={onClear}
+                    className="w-full text-left text-xs text-notion-text-muted hover:text-notion-text hover:bg-notion-hover px-2 py-1.5 rounded transition-colors"
+                >
+                    Limpar
+                </button>
+                <div className="px-2 py-2 text-[10px] text-notion-text-muted flex items-center gap-1.5 border-t border-notion-border mt-1 opacity-50">
+                    <div className="w-3 h-3 rounded-full bg-notion-hover flex items-center justify-center">?</div>
+                    Sobre lembretes
+                </div>
+            </div>
+        </div>
+    );
 }
