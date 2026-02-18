@@ -32,7 +32,26 @@ export function useKanban() {
   // Mutation para atualizar card
   const updateCardMutation = useMutation({
     mutationFn: taskService.updateTask,
-    onSuccess: () => {
+    onMutate: async (updatedCard) => {
+      // Cancelar queries em andamento
+      await queryClient.cancelQueries({ queryKey: ['cards'] });
+      
+      // Snapshot do estado anterior
+      const previousCards = queryClient.getQueryData(['cards']);
+      
+      // Atualização otimista
+      queryClient.setQueryData(['cards'], (old: any[] = []) => 
+        old.map(card => card.id === updatedCard.id ? updatedCard : card)
+      );
+      
+      return { previousCards };
+    },
+    onError: (_error, _updatedCard, context: any) => {
+      // Rollback em caso de erro
+      queryClient.setQueryData(['cards'], context.previousCards);
+    },
+    onSettled: () => {
+      // Refetch para garantir consistência
       queryClient.invalidateQueries({ queryKey: ['cards'] });
     },
   });
@@ -60,6 +79,7 @@ export function useKanban() {
     updateCard: updateCardMutation.mutate,
     moveCard: moveCardMutation.mutate,
     deleteCard: deleteCardMutation.mutate,
-    isLoading: isQueryPending || createCardMutation.isPending || updateCardMutation.isPending || moveCardMutation.isPending || deleteCardMutation.isPending,
+    isInitialLoading: isQueryPending,
+    isMutationPending: createCardMutation.isPending || updateCardMutation.isPending || moveCardMutation.isPending || deleteCardMutation.isPending,
   };
 }

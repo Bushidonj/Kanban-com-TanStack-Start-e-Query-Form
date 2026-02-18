@@ -1,9 +1,10 @@
 import { useForm } from '@tanstack/react-form';
-import { X, Calendar as CalendarIcon, Tag, MessageSquare, FileText, Target, Users, CircleDot, ArrowDownCircle, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Calendar as CalendarIcon, Tag, MessageSquare, FileText, Target, Users, CircleDot, ArrowDownCircle, ArrowUpRight, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import type { Card, CardStatus, Priority } from '../../types/kanban';
 import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES, AVAILABLE_TAGS } from '../../mock/kanbanData';
 import { useState, useRef, useEffect } from 'react';
 import { Plus, FileText as FileTextIcon } from 'lucide-react';
+import { authService } from '../../services/auth.service';
 
 interface CardModalProps {
     card: Card;
@@ -22,6 +23,81 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
     const calendarRef = useRef<HTMLDivElement>(null);
     const priorityRef = useRef<HTMLDivElement>(null);
     const tagsRef = useRef<HTMLDivElement>(null);
+
+    // Obter usuário
+    const currentUser = authService.getCurrentUser();
+    const isAdmin = currentUser?.role === 'Admin';
+
+    // Função para verificar se usuário pode deletar comentário
+    const canDeleteComment = (commentAuthor: string) => {
+        return isAdmin || currentUser?.name === commentAuthor;
+    };
+
+    // Estado local para comentários (otimização)
+    // Removido estado local - usar dados do card diretamente
+    // const [localComments, setLocalComments] = useState(card.comments);
+
+    // Removido - usar dados do card diretamente
+
+    // Função para adicionar comentário sem fechar o modal
+    const handleAddComment = async () => {
+        const newComment = form.getFieldValue('newComment');
+        if (newComment && newComment.trim()) {
+            // Criar comentário otimista
+            const newCommentObj = {
+                id: `comment-${Date.now()}`,
+                author: currentUser?.name || 'Usuário',
+                content: newComment.trim(),
+                createdAt: new Date().toISOString(),
+            };
+            
+            // Adicionar imediatamente à UI (otimista)
+            const updatedComments = [...card.comments, newCommentObj];
+            
+            // Limpar campo
+            form.setFieldValue('newComment', '');
+            
+            // Atualizar card com comentários atualizados
+            const updatedCard = {
+                ...card,
+                comments: updatedComments,
+                newComment: '',
+            };
+            
+            // Salvar no backend (background)
+            try {
+                await onUpdate(updatedCard);
+                console.log('[CardModal] ✅ Comentário salvo com sucesso');
+            } catch (error) {
+                console.error('[CardModal] ❌ Erro ao salvar comentário:', error);
+                // Rollback automático via TanStack Query
+            }
+        }
+    };
+    const handleDeleteComment = async (commentId: string, e?: React.MouseEvent) => {
+        e?.stopPropagation(); // Impedir que o formulário seja submetido
+        
+        console.log('[CardModal] 🗑️ Deletando comentário:', commentId);
+        console.log('[CardModal] 📋 Comentários antes:', card.comments);
+        
+        // Remover imediatamente da UI (otimista)
+        const updatedComments = card.comments.filter((comment: any) => comment.id !== commentId);
+        
+        // Atualizar card com comentários atualizados
+        const updatedCard = {
+            ...card,
+            comments: updatedComments,
+        };
+        
+        // Salvar no backend (background)
+        try {
+            await onUpdate(updatedCard);
+            console.log('[CardModal] ✅ Comentário deletado com sucesso');
+        } catch (error) {
+            console.error('[CardModal] ❌ Erro ao deletar comentário:', error);
+            // Rollback automático via TanStack Query
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -58,24 +134,13 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
             newComment: '',
         },
         onSubmit: async ({ value }) => {
+            // Não processar comentários aqui - eles são processados pelo handleAddComment
             const updatedCard = {
                 ...card,
                 ...value,
+                comments: card.comments, // Usar comentários locais atualizados
+                newComment: '', // Limpar campo newComment
             };
-            
-            // Se houver um novo comentário, adicionar aos comentários existentes
-            if (value.newComment && value.newComment.trim()) {
-                const newCommentObj = {
-                    id: `comment-${Date.now()}`,
-                    author: 'Allan Azevedo', // TODO: Pegar usuário logado
-                    content: value.newComment.trim(),
-                    createdAt: new Date().toISOString(),
-                };
-                updatedCard.comments = [...(updatedCard.comments || []), newCommentObj];
-            }
-            
-            // Limpar o campo newComment após salvar
-            updatedCard.newComment = '';
             
             onUpdate(updatedCard);
             onClose();
@@ -494,15 +559,37 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                             </div>
 
                             <div className="space-y-4">
-                                {card.comments.map(comment => (
+                                {card.comments.map((comment: any) => (
                                     <div key={comment.id} className="flex gap-3">
                                         <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400 border border-blue-500/30 flex-shrink-0">
                                             {comment.author[0]}
                                         </div>
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-bold text-notion-text">{comment.author}</span>
-                                                <span className="text-[10px] text-notion-text-muted">{new Date(comment.createdAt).toLocaleString()}</span>
+                                        <div className="space-y-1 flex-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-notion-text">{comment.author}</span>
+                                                    <span className="text-[10px] text-notion-text-muted">{new Date(comment.createdAt).toLocaleString()}</span>
+                                                </div>
+                                                {canDeleteComment(comment.author) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            console.log('[CardModal] 🖱️ Botão deletar clicado!');
+                                                            console.log('[CardModal] 🎯 Comment ID:', comment.id);
+                                                            console.log('[CardModal] 👤 Comment Author:', comment.author);
+                                                            console.log('[CardModal] 👤 Current User:', currentUser?.name);
+                                                            console.log('[CardModal] 🛡️ Can Delete:', canDeleteComment(comment.author));
+                                                            
+                                                            e.stopPropagation();
+                                                            e.preventDefault();
+                                                            handleDeleteComment(comment.id, e);
+                                                        }}
+                                                        className="p-1 hover:bg-red-500/20 rounded transition-colors text-red-400 hover:text-red-300"
+                                                        title="Deletar comentário"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                )}
                                             </div>
                                             <p className="text-sm text-notion-text-muted bg-notion-hover px-3 py-2 rounded-lg border border-notion-border inline-block">
                                                 {comment.content}
@@ -516,18 +603,34 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                     <div className="w-8 h-8 rounded-full bg-notion-hover border border-notion-border flex items-center justify-center text-xs font-bold text-notion-text-muted">
                                         U
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 flex gap-2">
                                         <form.Field
                                             name="newComment"
                                             children={(field) => (
-                                                <input
-                                                    name={field.name}
-                                                    value={field.state.value || ''}
-                                                    onBlur={field.handleBlur}
-                                                    onChange={(e) => field.handleChange(e.target.value)}
-                                                    className="w-full bg-transparent border border-notion-border rounded-lg p-2 text-sm outline-none focus:border-notion-text-muted/50 transition-colors"
-                                                    placeholder="Escreva um comentário..."
-                                                />
+                                                <>
+                                                    <input
+                                                        name={field.name}
+                                                        value={field.state.value || ''}
+                                                        onBlur={field.handleBlur}
+                                                        onChange={(e) => field.handleChange(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault(); // Impedir que o formulário seja submetido
+                                                                handleAddComment(); // Adicionar comentário sem fechar
+                                                            }
+                                                        }}
+                                                        className="flex-1 bg-transparent border border-notion-border rounded-lg p-2 text-sm outline-none focus:border-notion-text-muted/50 transition-colors"
+                                                        placeholder="Escreva um comentário..."
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAddComment}
+                                                        disabled={!field.state.value?.trim()}
+                                                        className="px-3 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/30 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                                                    >
+                                                        Enviar
+                                                    </button>
+                                                </>
                                             )}
                                         />
                                     </div>
