@@ -34,7 +34,7 @@ function LoginPage() {
       const response = await authService.login({ email, password })
 
       console.log(`[Auth] ✅ Login successful for ${email}. Role: ${response.user.role}`)
-      console.log(`[Auth] AccessToken: ${response.accessToken.substring(0, 10)}...`)
+      console.log(`[Auth] SessionToken: ${response.sessionToken.substring(0, 10)}...`)
       console.log(`[Auth] RefreshToken: ${response.refreshToken.substring(0, 10)}...`)
 
       router.navigate({ to: '/' })

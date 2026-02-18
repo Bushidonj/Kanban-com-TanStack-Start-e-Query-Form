@@ -6,20 +6,20 @@ export interface User {
 }
 
 export interface AuthTokens {
-  accessToken: string;
+  sessionToken: string;
   refreshToken: string;
 }
 
 export interface LoginResponse {
   user: User;
-  accessToken: string;
+  sessionToken: string;
   refreshToken: string;
   expiresIn: string;
   message: string;
 }
 
 export interface RefreshResponse {
-  accessToken: string;
+  sessionToken: string;
   refreshToken: string;
   expiresIn: string;
   message: string;

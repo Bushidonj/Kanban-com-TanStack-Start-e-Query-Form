@@ -4,9 +4,9 @@ import type { LoginResponse } from '../types/auth';
 export const authService = {
   async login(credentials: any): Promise<LoginResponse> {
     const response = await api.post<LoginResponse>('/auth/login', credentials);
-    const { accessToken, refreshToken, user } = response.data;
+    const { sessionToken, refreshToken, user } = response.data;
 
-    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('sessionToken', sessionToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('userEmail', user.email);
@@ -20,7 +20,7 @@ export const authService = {
     try {
       await api.post('/auth/logout');
     } finally {
-      localStorage.removeItem('accessToken');
+      localStorage.removeItem('sessionToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('isAuthenticated');
       localStorage.removeItem('userEmail');

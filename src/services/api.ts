@@ -11,7 +11,7 @@ const api = axios.create({
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('sessionToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -47,16 +47,16 @@ api.interceptors.response.use(
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const { sessionToken, refreshToken: newRefreshToken } = response.data;
         
-        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('sessionToken', sessionToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${sessionToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         console.error('Session expired, logging out...', refreshError);
-        localStorage.removeItem('accessToken');
+        localStorage.removeItem('sessionToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('isAuthenticated');
         localStorage.removeItem('userEmail');
