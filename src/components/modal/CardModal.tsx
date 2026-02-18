@@ -24,6 +24,7 @@ import type { Card, CardStatus, Priority, ResponsibleUser, Attachment, Tag, Comm
 import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES, AVAILABLE_TAGS } from '../../mock/kanbanData';
 import { useState, useRef, useEffect } from 'react';
 import { taskService } from '../../services/task.service';
+import { parseLocalDate, formatLocalDate } from '../../utils/date';
 
 interface FormValues {
     title: string;
@@ -412,7 +413,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                 onClick={() => setIsCalendarOpen(!isCalendarOpen)}
                                             >
                                                 <span className="text-sm text-notion-text capitalize">
-                                                    {new Date(field.state.value).toLocaleDateString('pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    {formatLocalDate(field.state.value, 'pt-BR', { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </span>
                                             </div>
 
@@ -909,8 +910,8 @@ function LayoutIcon({ status }: { status: CardStatus }) {
 }
 
 function NotionCalendar({ value, onChange, onClear }: { value: string, onChange: (date: string) => void, onClear: () => void }) {
-    const [currentDate, setCurrentDate] = useState(new Date(value));
-    const [selectedDate, setSelectedDate] = useState(new Date(value));
+    const [currentDate, setCurrentDate] = useState(parseLocalDate(value));
+    const [selectedDate, setSelectedDate] = useState(parseLocalDate(value));
 
     const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();

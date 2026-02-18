@@ -1,4 +1,5 @@
 import { MoreHorizontal, FileText, Calendar, MessageSquare, CheckSquare } from 'lucide-react';
+import { formatLocalDate, parseLocalDate } from '../../utils/date';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Card, Priority } from '../../types/kanban';
@@ -147,7 +148,7 @@ export function KanbanCard({ card, isOverlay, onEdit }: KanbanCardProps) {
                     <div className="flex items-center gap-2 text-notion-text-muted">
                         <Calendar size={12} className="opacity-60" />
                         <span className="text-[10px] font-medium">
-                            Entrega: {new Date(card.deadline).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                            Entrega: {formatLocalDate(card.deadline, 'pt-BR', { day: '2-digit', month: 'short' })}
                         </span>
                     </div>
 
