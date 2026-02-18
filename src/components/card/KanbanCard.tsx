@@ -76,7 +76,7 @@ export function KanbanCard({ card, isOverlay, onEdit }: KanbanCardProps) {
                         {card.responsible.map((person) => (
                             <div key={person} className="flex items-center gap-2">
                                 <div className="w-5 h-5 rounded-full bg-notion-hover flex items-center justify-center text-[10px] font-bold border border-notion-border text-notion-text flex-shrink-0">
-                                    {person[0]}
+                                    {person.charAt(0).toUpperCase()}
                                 </div>
                                 <span className="text-[11px] text-notion-text-muted font-medium truncate">{person}</span>
                             </div>

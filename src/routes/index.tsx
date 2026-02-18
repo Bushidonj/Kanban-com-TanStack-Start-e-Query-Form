@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { INITIAL_COLUMNS } from '../mock/kanbanData'
-import type { Card, CardStatus } from '../types/kanban'
+import type { Card, CardStatus, Column } from '../types/kanban'
 import { useKanban } from '../hooks/useKanban'
 import {
   DndContext,
