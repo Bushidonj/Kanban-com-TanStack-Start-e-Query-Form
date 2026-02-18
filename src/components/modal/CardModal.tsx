@@ -1,10 +1,11 @@
 import { useForm } from '@tanstack/react-form';
 import { X, Calendar as CalendarIcon, Tag, MessageSquare, FileText, Target, Users, CircleDot, ArrowDownCircle, ArrowUpRight, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
-import type { Card, CardStatus, Priority } from '../../types/kanban';
+import { authService } from '../../services/auth.service';
+import api from '../../services/api';
+import type { Card, CardStatus, Priority, ResponsibleUser } from '../../types/kanban';
 import { STATUS_COLORS, STATUS_CATEGORIES, STATUS_TITLE_COLORS, MOCK_USERS, DESCRIPTION_TEMPLATES, AVAILABLE_TAGS } from '../../mock/kanbanData';
 import { useState, useRef, useEffect } from 'react';
 import { Plus, FileText as FileTextIcon } from 'lucide-react';
-import { authService } from '../../services/auth.service';
 
 interface CardModalProps {
     card: Card;
@@ -23,6 +24,28 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
     const calendarRef = useRef<HTMLDivElement>(null);
     const priorityRef = useRef<HTMLDivElement>(null);
     const tagsRef = useRef<HTMLDivElement>(null);
+
+    // Estados de usuários
+    const [users, setUsers] = useState<ResponsibleUser[]>([]);
+    const [isUsersLoading, setIsUsersLoading] = useState(false);
+
+    // Buscar usuários reais do backend
+    useEffect(() => {
+        const loadUsers = async () => {
+            setIsUsersLoading(true);
+            try {
+                const response = await api.get('/users');
+                setUsers(response.data);
+            } catch (error) {
+                console.error('[CardModal] ❌ Erro ao buscar usuários:', error);
+                // Fallback para MOCK_USERS transformados em objetos se der erro
+                setUsers(MOCK_USERS.map(u => ({ id: u, name: u })));
+            } finally {
+                setIsUsersLoading(false);
+            }
+        };
+        loadUsers();
+    }, []);
 
     // Obter usuário
     const currentUser = authService.getCurrentUser();
@@ -50,20 +73,20 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                 content: newComment.trim(),
                 createdAt: new Date().toISOString(),
             };
-            
+
             // Adicionar imediatamente à UI (otimista)
             const updatedComments = [...card.comments, newCommentObj];
-            
+
             // Limpar campo
             form.setFieldValue('newComment', '');
-            
+
             // Atualizar card com comentários atualizados
             const updatedCard = {
                 ...card,
                 comments: updatedComments,
                 newComment: '',
             };
-            
+
             // Salvar no backend (background)
             try {
                 await onUpdate(updatedCard);
@@ -76,19 +99,19 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
     };
     const handleDeleteComment = async (commentId: string, e?: React.MouseEvent) => {
         e?.stopPropagation(); // Impedir que o formulário seja submetido
-        
+
         console.log('[CardModal] 🗑️ Deletando comentário:', commentId);
         console.log('[CardModal] 📋 Comentários antes:', card.comments);
-        
+
         // Remover imediatamente da UI (otimista)
         const updatedComments = card.comments.filter((comment: any) => comment.id !== commentId);
-        
+
         // Atualizar card com comentários atualizados
         const updatedCard = {
             ...card,
             comments: updatedComments,
         };
-        
+
         // Salvar no backend (background)
         try {
             await onUpdate(updatedCard);
@@ -141,7 +164,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                 comments: card.comments, // Usar comentários locais atualizados
                 newComment: '', // Limpar campo newComment
             };
-            
+
             onUpdate(updatedCard);
             onClose();
         },
@@ -153,7 +176,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-4 border-b border-notion-border">
                     <div className="flex items-center gap-2 text-notion-text-muted text-sm capitalize">
-                        <LayoutIcon status={card.status} />
+                        {/* Como não temos LayoutIcon aqui, vou usar um fallback */}
                         <span>{card.status}</span>
                     </div>
                     <button
@@ -202,12 +225,12 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                     onClick={() => setIsUserOpen(!isUserOpen)}
                                                 >
                                                     {field.state.value.length > 0 ? (
-                                                        field.state.value.map((userName: string) => (
-                                                            <div key={userName} className="flex items-center gap-1.5 bg-notion-hover px-1.5 py-0.5 rounded border border-notion-border">
+                                                        field.state.value.map((person: any) => (
+                                                            <div key={person.id} className="flex items-center gap-1.5 bg-notion-hover px-1.5 py-0.5 rounded border border-notion-border">
                                                                 <div className="w-4 h-4 rounded-full bg-notion-border flex items-center justify-center text-[8px] font-bold text-notion-text">
-                                                                    {userName[0]}
+                                                                    {person.name[0]}
                                                                 </div>
-                                                                <span className="text-xs text-notion-text">{userName}</span>
+                                                                <span className="text-xs text-notion-text">{person.name}</span>
                                                             </div>
                                                         ))
                                                     ) : (
@@ -217,35 +240,39 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
 
                                                 {isUserOpen && (
                                                     <div className="absolute top-full left-0 mt-1 w-56 bg-notion-sidebar border border-notion-border rounded-lg shadow-2xl z-[60] overflow-hidden p-1">
-                                                        {MOCK_USERS.map(user => {
-                                                            const isSelected = field.state.value.includes(user);
-                                                            return (
-                                                                <div
-                                                                    key={user}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const newValue = isSelected
-                                                                            ? field.state.value.filter((u: string) => u !== user)
-                                                                            : [...field.state.value, user];
-                                                                        field.handleChange(newValue);
-                                                                    }}
-                                                                    className={`
-                                                                        flex items-center justify-between p-2 rounded cursor-pointer transition-colors
-                                                                        ${isSelected ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
-                                                                    `}
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-5 h-5 rounded-full bg-notion-hover flex items-center justify-center text-[8px] font-bold border border-notion-border text-notion-text">
-                                                                            {user[0]}
+                                                        {isUsersLoading ? (
+                                                            <div className="p-4 text-center text-xs text-notion-text-muted">Carregando usuários...</div>
+                                                        ) : (
+                                                            users.map(user => {
+                                                                const isSelected = field.state.value.some((u: any) => u.id === user.id);
+                                                                return (
+                                                                    <div
+                                                                        key={user.id}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const newValue = isSelected
+                                                                                ? field.state.value.filter((u: any) => u.id !== user.id)
+                                                                                : [...field.state.value, { id: user.id, name: user.name }];
+                                                                            field.handleChange(newValue);
+                                                                        }}
+                                                                        className={`
+                                                                            flex items-center justify-between p-2 rounded cursor-pointer transition-colors
+                                                                            ${isSelected ? 'bg-notion-hover' : 'hover:bg-notion-hover'}
+                                                                        `}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-5 h-5 rounded-full bg-notion-hover flex items-center justify-center text-[8px] font-bold border border-notion-border text-notion-text">
+                                                                                {user.name[0]}
+                                                                            </div>
+                                                                            <span className="text-sm text-notion-text">{user.name}</span>
                                                                         </div>
-                                                                        <span className="text-sm text-notion-text">{user}</span>
+                                                                        {isSelected && (
+                                                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                                                        )}
                                                                     </div>
-                                                                    {isSelected && (
-                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
+                                                                );
+                                                            })
+                                                        )}
                                                     </div>
                                                 )}
                                             </>
@@ -375,7 +402,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                     className={`text-xs font-bold px-2 py-0.5 rounded ${field.state.value === 'Urgente' ? 'bg-red-900/40 text-red-400' :
                                                         field.state.value === 'Média' ? 'bg-orange-900/40 text-orange-400' :
                                                             'bg-green-900/40 text-green-400'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {field.state.value}
                                                 </span>
@@ -399,7 +426,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                                 className={`text-xs font-bold px-2 py-0.5 rounded ${priority === 'Urgente' ? 'bg-red-900/40 text-red-400' :
                                                                     priority === 'Média' ? 'bg-orange-900/40 text-orange-400' :
                                                                         'bg-green-900/40 text-green-400'
-                                                                }`}
+                                                                    }`}
                                                             >
                                                                 {priority}
                                                             </span>
@@ -579,7 +606,7 @@ export default function CardModal({ card, onClose, onUpdate }: CardModalProps) {
                                                             console.log('[CardModal] 👤 Comment Author:', comment.author);
                                                             console.log('[CardModal] 👤 Current User:', currentUser?.name);
                                                             console.log('[CardModal] 🛡️ Can Delete:', canDeleteComment(comment.author));
-                                                            
+
                                                             e.stopPropagation();
                                                             e.preventDefault();
                                                             handleDeleteComment(comment.id, e);

@@ -120,25 +120,20 @@ export const taskService = {
       
       // Mapear dados do backend para o formato do frontend
       try {
-        const tasksWithNames = await Promise.all(
-          response.data.map(async (task: any) => {
-            console.log('[TaskService] 🔍 Processing task:', task.id, task.title);
-            console.log('[TaskService] 🔍 Task responsible field:', task.responsible, 'Type:', typeof task.responsible);
-            
-            // Extrair IDs dos responsáveis e buscar nomes no cache
-            const responsibleIds = task.responsible && Array.isArray(task.responsible) 
-              ? task.responsible.map((r: any) => r.id) 
+          const tasksWithNames = response.data.map((task: any) => {
+            const responsible = task.responsible && Array.isArray(task.responsible) 
+              ? task.responsible.map((r: any) => {
+                  const id = r.id || (typeof r === 'string' ? r : 'unknown');
+                  const name = r.name || (typeof r === 'string' ? r : 'Usuário');
+                  return { id, name };
+                })
               : [];
-            console.log('[TaskService] 🔍 Extracted responsible IDs:', responsibleIds);
             
-            const responsibleNames = await getResponsibleNames(responsibleIds);
-            console.log('[TaskService] � Task', task.id, 'responsible names:', responsibleNames);
-            
-            const mappedTask = {
+            return {
               id: task.id,
               title: task.title,
               description: task.description || '',
-              responsible: responsibleNames,
+              responsible: responsible,
               status: reverseStatusMap[task.status] || 'Backlog',
               deadline: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
               priority: reversePriorityMap[task.priority] as 'Baixa' | 'Média' | 'Urgente' || 'Baixa',
@@ -146,11 +141,7 @@ export const taskService = {
               comments: task.comments || [],
               attachments: task.attachments || [],
             };
-            
-            console.log('[TaskService] ✅ Mapped task:', mappedTask);
-            return mappedTask;
-          })
-        );
+          });
         
         console.log('[TaskService] 🏁 Final tasksWithNames:', tasksWithNames);
         console.log('[TaskService] 📤 Returning', tasksWithNames.length, 'tasks');
@@ -185,7 +176,7 @@ export const taskService = {
         status: statusMap[task.status],
         priority: priorityMap[task.priority],
         due_date: task.deadline ? new Date(task.deadline).toISOString() : null,
-        responsible: task.responsible,
+        responsible: task.responsible.map(r => r.id),
         tags: task.tags,
         comments: task.comments,
         attachments: task.attachments,
@@ -226,7 +217,7 @@ export const taskService = {
         status: statusMap[task.status],
         priority: priorityMap[task.priority],
         due_date: task.deadline ? new Date(task.deadline).toISOString() : null,
-        responsible: task.responsible,
+        responsible: task.responsible.map(r => r.id),
         tags: task.tags,
         comments: task.comments,
         attachments: task.attachments,
