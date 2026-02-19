@@ -9,6 +9,7 @@ export const authService = {
     localStorage.setItem('sessionToken', sessionToken);
     localStorage.setItem('refreshToken', refreshToken);
     localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('userId', user.id); // ✅ ADICIONAR ID DO USUÁRIO
     localStorage.setItem('userEmail', user.email);
     localStorage.setItem('userName', user.name);
     localStorage.setItem('userRole', user.role);
@@ -23,6 +24,7 @@ export const authService = {
       localStorage.removeItem('sessionToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userId'); // ✅ REMOVER ID DO USUÁRIO
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userName');
       localStorage.removeItem('userRole');
@@ -34,6 +36,7 @@ export const authService = {
     if (!isAuthenticated) return null;
 
     return {
+      id: localStorage.getItem('userId'), // ✅ ADICIONAR ID DO USUÁRIO
       email: localStorage.getItem('userEmail'),
       name: localStorage.getItem('userName'),
       role: localStorage.getItem('userRole'),
