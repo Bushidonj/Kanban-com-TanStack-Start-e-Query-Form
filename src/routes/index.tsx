@@ -18,6 +18,7 @@ import CardModal from '../components/modal/CardModal'
 import { ConfirmModal } from '../components/modal/ConfirmModal'
 import { KanbanColumn } from '../components/kanban/KanbanColumn'
 import { KanbanCard } from '../components/card/KanbanCard'
+import { NotificationDropdown } from '../components/notifications'
 
 export const Route = createFileRoute('/')({
   component: KanbanPage,
@@ -102,12 +103,15 @@ function KanbanPage() {
             <span>🚀</span>
             Kanban / Backlog de Produto
           </h1>
-          {isMutationPending && (
-            <div className="flex items-center gap-2 text-[11px] text-notion-text-muted animate-in fade-in duration-300">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span>Salvando alterações...</span>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            <NotificationDropdown />
+            {isMutationPending && (
+              <div className="flex items-center gap-2 text-[11px] text-notion-text-muted animate-in fade-in duration-300">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span>Salvando alterações...</span>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4 mt-6 text-sm text-notion-text-muted border-b border-notion-border pb-2">
           <div className="px-2 py-1 bg-notion-hover text-notion-text rounded cursor-pointer">Board</div>
