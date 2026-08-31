@@ -4,7 +4,12 @@ dist
 dist-ssr
 *.local
 count.txt
+
+# Environment variables
 .env
+.env.*
+!.env.example
+
 .nitro
 .tanstack
 .wrangler
@@ -12,3 +17,4 @@ count.txt
 .vinxi
 __unconfig*
 todos.json
+
